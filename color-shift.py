@@ -5,6 +5,11 @@ from mpl_toolkits.mplot3d import Axes3D
 from sklearn.cluster import KMeans
 from PIL import Image
 
+#defining constants RGB
+RED = 0
+GREEN = 1
+BLUE = 2
+
 
 def get_clusters(source_img):
 
@@ -32,34 +37,52 @@ def get_color_map(source, dest):
     #initiating dictionary to hold the color mappings
     color_map = {}
 
+    index = 0
 
+    while index < len(source):
+
+        #getting the rgb mappings
+        r = source[index][RED] - dest[index][RED]
+        g = source[index][GREEN] - dest[index][GREEN]
+        b  = source[index][BLUE] - dest[index][BLUE]
+        
+        #add values to dictionary
+        color_map[index] = [r, g, b]
+        print(r, g, b)
+        index += 1
+
+    print(color_map) 
 
 def change_colors(color_map, dest_img):
 
-    #load image
-    img = Image.open(dest_img)
+    #reading source image
+    img = cv2.imread(dest_img)
+    #convert from BGR to RGB
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    #reshape to list of pixels
+    new_img = img.reshape((img.shape[0] * img.shape[1], 3))
 
-    #convert to RGB
-    img = img.convert('RGB')
+    #cluster pixels
+    kmeans = KMeans(n_clusters = 4)
+    kmeans.fit(new_img)
+
+    #get labels
+    labels = kmeans.labels_
     
-    #load the pixels
-    pixels = img.load()
-    print(img.size)
-    #print(list(img.getdata()))
+    #declaring new dimensions
+    x = int(labels.shape[0]/img.shape[1])
+    y = int(labels.shape[0]/img.shape[0])
+    #reshape labels
+    labels = labels.reshape(x, y, 1)
+    print(labels.shape)
+    print(img.shape)
 
-    color = 0
-    #print('color:', dest[color])
-    #change pixel colors
-    for i in range(img.size[0]):
-        for j in range(img.size[1]):
-            #print('pixels: ', pixels[i,j])
-            if pixels[i,j] == (dest[color][0], dest[color][1], dest[color][2]):
-                pixels[i,j] = (source[color][0], source[color][1], source[color][2])
-                color = color + 1
+    #iterate through img updating pixel colors
+    
 
-    img.save('newimage.png')
+    #img.save('newimage.png')
 
-    img.show()
+    #img.show()
 
 #get the fire clusters and print
 fire = get_clusters('poke/fire/charmander.png')
@@ -71,9 +94,10 @@ water = get_clusters('poke/water/vaporeon.png')
 print("water:")
 print(water)
 
-#create the color map
+#create the color map using the clusters
+color_map = get_color_map(fire, water)
 
-#change_colors(fire, water, 'poke/water/vaporeon.png')
+change_colors(color_map, 'poke/water/vaporeon.png')
 
 
 
