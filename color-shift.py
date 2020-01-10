@@ -19,7 +19,6 @@ def get_clusters(source_img):
     source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
     #reshape to list of pixels
     new_source = source.reshape((source.shape[0] * source.shape[1], 3))
-    print(source.shape)
 
     #cluster pixels
     kmeans = KMeans(n_clusters = 4)
@@ -48,10 +47,9 @@ def get_color_map(source, dest):
         
         #add values to dictionary
         color_map[index] = [r, g, b]
-        print(r, g, b)
         index += 1
 
-    print(color_map) 
+    return color_map
 
 def change_colors(color_map, dest_img):
 
@@ -73,16 +71,48 @@ def change_colors(color_map, dest_img):
     x = int(labels.shape[0]/img.shape[1])
     y = int(labels.shape[0]/img.shape[0])
     #reshape labels
-    labels = labels.reshape(x, y, 1)
-    print(labels.shape)
-    print(img.shape)
+    labels = labels.reshape(x, y)
 
     #iterate through img updating pixel colors
+    x = 0
+    y = 0
     
+    for x in range(img.shape[1]):
+        for y in range(img.shape[0]):
+            #get current rgb values
+            rgb = img[x][y]
+            label = labels[x][y]
+            #get color mapping
+            mapping = color_map[label]
+            
+            #calculate new rgb values
+            r = rgb[RED] + mapping[RED]
+            g = rgb[GREEN] + mapping[GREEN]
+            b = rgb[BLUE] + mapping[BLUE]
 
-    #img.save('newimage.png')
+            #check that they are all in bounds
+            if r < 0:
+                r = 0
+            if g < 0:
+                g = 0
+            if b < 0:
+                b = 0
+            if r > 255:
+                r = 255
+            if g > 255:
+                g = 255
+            if b > 255:
+                b = 255
 
-    #img.show()
+            #set new rgb values
+            img[x][y][RED] = r
+            img[x][y][GREEN] = g
+            img[x][y][BLUE] = b
+
+    #save img and display
+    final = Image.fromarray(img)
+    final.save('newimage.png')
+    final.show()
 
 #get the fire clusters and print
 fire = get_clusters('poke/fire/charmander.png')
@@ -95,9 +125,9 @@ print("water:")
 print(water)
 
 #create the color map using the clusters
-color_map = get_color_map(fire, water)
+color_map = get_color_map(water, fire)
 
-change_colors(color_map, 'poke/water/vaporeon.png')
+change_colors(color_map, 'poke/water/charmander.png')
 
 
 
