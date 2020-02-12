@@ -10,6 +10,7 @@ python3 color-shift.py
 
 Color shift is composed of only one python file, making it easy to use.
 - The only things that must be changed in the code are the number of clusters desired and the destination/source images.
+- TODO: accept command line args
 
 ## Results
 
