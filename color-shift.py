@@ -1,3 +1,6 @@
+# Author: Maya Murad
+# Color-shift, shifts the colors from one image to another
+
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
@@ -7,30 +10,34 @@ from PIL import Image
 from collections import Counter
 import sys
 
-#defining constants HSV
+# Defining constants HSV
 HUE = 0
 SATURATION = 1
 VALUE = 2
 
-CLUSTER_NUM = 3
+# Defining the number of clusters
+CLUSTER_NUM = 5
 
+# Method get_clusters uses KMeans to get clusters of colors from an image
+# Parameter:
+# source_img: the image name (String)
 def get_clusters(source_img):
 
-    #reading source image
+    # Reading source image
     source = cv2.imread(source_img)
-    #convert from BGR to HSV
+    # Convert from BGR to HSV
     source = cv2.cvtColor(source, cv2.COLOR_BGR2HSV)
-    #reshape to list of pixels
+    # Reshape to list of pixels
     new_source = source.reshape((source.shape[0] * source.shape[1], 3))
 
-    #cluster pixels
+    # Cluster pixels
     kmeans = KMeans(n_clusters = CLUSTER_NUM, init = 'k-means++', max_iter = 100, n_init = 10, verbose = 0, random_state = 1000)
     kmeans.fit(new_source)
 
-    #get dominant colors
+    # Get dominant colors
     clusters = kmeans.cluster_centers_
     labels = kmeans.labels_
-    #converting to int
+    # Cconverting to int
     clusters = clusters.astype(int)
 
     #plot for debugging
@@ -40,29 +47,38 @@ def get_clusters(source_img):
 
     return clusters, labels
 
+# Method order takes the clusters and matches them up according
+# to the number of labels in each cluster, therefore the most
+# dominant clusters of each image will be associated with each 
+# other since KMeans does not order clusters by dominance
+# Parameters:
+# source_labels, dest_labels: the labels from each image, received
+# from KMeans
 def order(source_labels, dest_labels):
 
-    #initiating an empty dicttionary to hold number matchups
+    # Initializing an empty dicttionary to hold number matchups
     s_order = {}
     d_order = {}
 
     index = 0
     count = 0
 
-    #getting the number of pixels belonging to each cluster
+    # Getting the number of pixels belonging to each cluster
     s_unique, s_count = np.unique(source_labels, return_counts = True)
-    #copying array and sorting it 
+    
+    # Copying the array and sorting it 
     s_sorted = s_count.copy()
     s_sorted.sort()
     s_sorted = s_sorted[::-1]
     
+    # Same thing as above for the other img
     d_unique, d_count = np.unique(dest_labels, return_counts = True)
     d_sorted = d_count.copy()
     d_sorted.sort()
     d_sorted = d_sorted[::-1]
 
-    #matching up the number of pixels in each cluster to index and storing result
-    #in a dictionary
+    # Matching up the number of pixels in each cluster to index and storing result
+    # in a dictionary
     for index in range (len(s_unique)):
         curr_number = s_count[index]
         for count in range(len(s_unique)):
@@ -70,6 +86,7 @@ def order(source_labels, dest_labels):
             if curr_number == number:
                 s_order[count] = index
     
+    # Same thing but for other img
     for index in range (len(d_unique)):
         curr_number = d_count[index]
         for count in range(len(d_unique)):
@@ -78,76 +95,85 @@ def order(source_labels, dest_labels):
                 d_order[count] = index
 
     return s_order, d_order
-    
+
+# Method get_color_map creates a dictionary that holds
+# the color changes to be made for each cluster
+# Parameters:
+# source, dest: the clusters from each img
+# s_order, d_order: dictionaries from the order method
 def get_color_map(source, dest, s_order, d_order):
     
-    #initiating dictionary to hold the color mappings
+    # Initializing a dictionary to hold the color mappings
     color_map = {}
 
     index = 0
 
-    print(s_order[index])
-    print(d_order[index])
-
     while index < len(source):
 
-        #getting the hsv mappings
+        # Calculating the hsv mappings
         h = source[s_order[index]][HUE]
         s = source[s_order[index]][SATURATION] - dest[d_order[index]][SATURATION]
         v = source[s_order[index]][VALUE] - dest[d_order[index]][VALUE]
         
-        #add values to dictionary
+        # Add the values to the dictionary
         color_map[index] = [h, s, v]
         index += 1
 
     return color_map
 
+# Method change_colors goes through the destination image pixel by
+# pixel and changes the colors
+# Paramaters:
+# color_map: the dictionary returned from the get_color_map method
+# dest_img: the destination image (String)
+# labels: the destination labels, received from KMeans
+# d_order: the destination order, received from the order method
 def change_colors(color_map, dest_img, labels, d_order):
 
-    #reading source image
+    # Reading source image
     img = cv2.imread(dest_img)
-    #convert from BGR to HSV
+    # Convert from BGR to HSV
     img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    #reshape to list of pixels
+    # Reshape to list of pixels
     new_img = img.reshape((img.shape[0] * img.shape[1], 3))
     
-    #declaring new dimensions
+    # Declaring new dimensions of the array of pixels
     x = int(labels.shape[0]/img.shape[1])
     y = int(labels.shape[0]/img.shape[0])
-    #reshape labels
+    # Reshape the labels
     labels = labels.reshape(x, y)
 
-    #iterate through img updating pixel colors
     x = 0
     y = 0
     
-    for x in range(img.shape[1]):
-        for y in range(img.shape[0]):
-            #get current rgb values
+    # Iterate through img updating pixel colors
+    for x in range(img.shape[0]):
+        for y in range(img.shape[1]):
+            # Get current hsv values
             hsv = img[x][y]
             label = labels[x][y]
-            #get color mapping
+            # Get color mapping
             mapping = color_map[label]
            
-            #detect white/grey
+            # Detect white/grey
             if 0 <= hsv[SATURATION] <= 5 and 128 <= hsv[VALUE] <= 255:
                 h = mapping[HUE]
                 s = hsv[SATURATION]
                 v = hsv[VALUE] 
 
-            #detect black/grey
+            # Detect black/grey
             elif 0 <= hsv[SATURATION] <= 175 and 0 <= hsv[VALUE] <= 127:
                 h = mapping[HUE] 
                 s = hsv[SATURATION] 
                 v = hsv[VALUE]
 
-            #calculate new hsv values
+            # Calculate new hsv values
             else:  
                 h = mapping[HUE]
                 s = hsv[SATURATION] + mapping[SATURATION] 
                 v = hsv[VALUE] + mapping[VALUE]
 
-            #check that they are all in bounds
+            # Check that they are all in bounds
             if h < 0:
                 h = 0
             if s < 0:
@@ -161,42 +187,42 @@ def change_colors(color_map, dest_img, labels, d_order):
             if v > 255:
                 v = 255
 
-            #set new hsv values
+            # Cet new hsv values
             img[x][y][HUE] = h
             img[x][y][SATURATION] = s
             img[x][y][VALUE] = v
 
-    #print img pixels into file
+    # Print the img pixels into file
 
     np.set_printoptions(threshold=np.inf, linewidth=img.shape[1])
     with open('output.txt', 'a') as f:
         print(img, file = f)
     
 
-    #save img, convert back to rgb, and display
+    # Save img, convert back to rgb, and display
     final = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
     cv2.imwrite('newimage.png', final)
     cv2.imshow('image', final)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-source = 'source.png'
-dest = 'dest.png'
-#get the fire clusters and print
+# The source and destination images
+source = 'source.jpg'
+dest = 'dest.jpg'
+
+# Get the source clusters and labels
 source_clusters, source_labels = get_clusters(source)
 
-#get the water clusters and print
+# Get the destination clusters and labels
 dest_clusters, dest_labels = get_clusters(dest)
 
+# Get the source and destionation orders
 s_order, d_order = order(source_labels, dest_labels)
 
-#create the color map using the clusters
+# Create the color map using the clusters
 color_map = get_color_map(source_clusters, dest_clusters, s_order, d_order)
 
-print(source_clusters)
-print(dest_clusters)
-print(color_map)
-
+# Change the colors
 change_colors(color_map, dest, dest_labels, d_order)
 
 
