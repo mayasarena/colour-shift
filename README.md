@@ -12,7 +12,7 @@ Color shift is composed of only one python file, making it easy to use.
 - The only things that must be changed in the code are the number of clusters desired and the destination/source images.
 - TODO: accept command line args
 
-Side note: color-shift-rgb.py is an alternate version to this project, where I first used an RGB approach but later realized that HSV works better. It is rough work, but still displayed in this repository to see the process of the project.
+<b>Side note</b>: color-shift-rgb.py is an alternate version to this project, where I first used an RGB approach but later realized that HSV works better. It is rough work, but still displayed in this repository to see the process of the project.
 
 ## Results
 
