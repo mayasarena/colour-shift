@@ -116,13 +116,9 @@ def change_colors(color_map, dest_img):
 
 #get the source clusters and print
 source = get_clusters('source.png')
-print("fire:")
-print(fire)
 
 #get the destination clusters and print
 dest = get_clusters('dest.png')
-print("water:")
-print(water)
 
 #create the color map using the clusters
 color_map = get_color_map(source, dest)
